@@ -1,5 +1,9 @@
 #include "Metronome.h"
 
+const string Beat::BEAT_HI		= "hi.mp3";
+const string Beat::BEAT_SNARE	= "snare.mp3";
+const string Beat::BEAT_WOOD	= "wood.mp3";
+
 Metronome& Metronome::getInstance()
 {
 	static Metronome instance;
@@ -9,7 +13,7 @@ Metronome& Metronome::getInstance()
 Metronome::Metronome()
 {
 	mBpm = 60;
-	mBeatName = BEAT_HI;
+	mBeatName = Beat::BEAT_HI;
 	mRunning = false;
 }
 
@@ -34,12 +38,15 @@ int Metronome::GetBpm() const
 
 void Metronome::SetBpm(int bpm)
 {
-	if (bpm < 60 || bpm > 220)
+	if (validateBpm(bpm))
 	{
-		throw bpmOutOfRangeException;
+		mBpm = bpm;
 	}
+}
 
-	mBpm = bpm;
+string Metronome::GetBeat() const
+{
+	return mBeatName;
 }
 
 void Metronome::SetBeat(std::string beatName)
@@ -52,15 +59,25 @@ void Metronome::Start()
 	Start(mBpm, mBeatName);
 }
 
+void Metronome::Start(int bpm)
+{
+	Start(bpm, mBeatName);
+}
+
 void Metronome::Start(int bpm, string beatName)
 {
-	if (mRunning)
+	if (!validateBpm(bpm))
 	{
-		throw alreadyRunningException;
+		throw BpmOutOfRangeException();
 	}
 
-	mRunning = true;
-	
+	mtx.lock();
+	if (mRunning)
+	{
+		mtx.unlock();
+		throw AlreadyRunningException();
+	}
+
 	FMOD_RESULT result = mSystem->createSound(Common_MediaPath(beatName.c_str()), FMOD_DEFAULT, 0, &mSound);
 	ERRCHECK(result);
 
@@ -68,11 +85,31 @@ void Metronome::Start(int bpm, string beatName)
 	mSound->setLoopPoints(0, FMOD_TIMEUNIT_MS, 60000 / bpm, FMOD_TIMEUNIT_MS);
 
 	mSystem->playSound(mSound, 0, false, &mChannel);
+
+	mRunning = true;
+	mtx.unlock();
 }
 
 void Metronome::Stop()
 {
+	mtx.lock();
+	if (!mRunning)
+	{
+		mtx.unlock();
+		throw NotRunningException();
+	}
+	
+	mRunning = false;
 	mChannel->stop();
 	mSound->release();
-	mRunning = false;
+	mtx.unlock();
+}
+
+bool Metronome::validateBpm(int bpm)
+{
+	if (bpm < 60 || bpm > 220)
+	{
+		throw BpmOutOfRangeException();
+	}
+	return true;
 }

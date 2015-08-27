@@ -7,12 +7,6 @@
 
 #define MAX_LOADSTRING 100
 
-// Operation to be performed on the two given integers.
-enum operation { ADD, SUB, MULT, REM };
-
-// Global Variables
-operation op = ADD;
-
 // Global Variables:
 HINSTANCE hInst;								// current instance
 TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
@@ -61,8 +55,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	return (int) msg.wParam;
 }
-
-
 
 //
 //  FUNCTION: MyRegisterClass()
@@ -142,40 +134,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message)
 	{
 	case WM_CREATE:
-		// Create the LHS edit box
-		CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), TEXT("0"),
+		// Create the BPM edit box
+		CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), TEXT("60"),
 			WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_TABSTOP,
-			20, 10, 85, 25, hWnd, (HMENU)IDC_LHS, GetModuleHandle(NULL), NULL);
-
-		// Create the RHS edit box
-		CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), TEXT("0"),
-			WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_TABSTOP,
-			20, 45, 85, 25, hWnd, (HMENU)IDC_RHS, GetModuleHandle(NULL), NULL);
-
-		// Create the Result edit box
-		CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("EDIT"), TEXT("0"),
-			WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_TABSTOP,
-			20, 85, 85, 25, hWnd, (HMENU)IDC_RESULT, GetModuleHandle(NULL), NULL);
-
-		// Create the Operation button
-		CreateWindowEx(NULL, TEXT("BUTTON"), TEXT("+"),
-			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | WS_TABSTOP,
-			115, 45, 30, 25, hWnd, (HMENU)IDC_OPBUTTON, GetModuleHandle(NULL), NULL);
+			100, 100, 40, 25, hWnd, (HMENU)IDC_BPM, GetModuleHandle(NULL), NULL);
 
 		// Create the Start button
 		CreateWindowEx(NULL, TEXT("BUTTON"), TEXT("START"),
 			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | WS_TABSTOP,
-			140, 70, 50, 40, hWnd, (HMENU)IDC_STARTBUTTON, GetModuleHandle(NULL), NULL);
+			230, 70, 60, 40, hWnd, (HMENU)IDC_STARTBUTTON, GetModuleHandle(NULL), NULL);
 
 		// Create the End button
 		CreateWindowEx(NULL, TEXT("BUTTON"), TEXT("END"),
 			WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | WS_TABSTOP,
-			140, 110, 50, 40, hWnd, (HMENU)IDC_STOPBUTTON, GetModuleHandle(NULL), NULL);
-
-		CreateWindowEx(WS_EX_STATICEDGE, TEXT("COMBOBOX"), TEXT("MyCombo1"),
-			CBS_DROPDOWN | WS_CHILD | WS_VISIBLE,
-			0, 0, 100, 20, hWnd, (HMENU)130, GetModuleHandle(NULL), NULL); // 100 = ID of this control
-
+			230, 120, 60, 40, hWnd, (HMENU)IDC_STOPBUTTON, GetModuleHandle(NULL), NULL);
+		
 		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
@@ -189,77 +162,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			case IDM_EXIT:
 				DestroyWindow(hWnd);
 				break;
+			case IDM_BEAT_HI:
+				Metronome::getInstance().SetBeat(Beat::BEAT_HI);
+				break;
+			case IDM_BEAT_SNARE:
+				Metronome::getInstance().SetBeat(Beat::BEAT_SNARE);
+				break;
+			case IDM_BEAT_WOOD:
+				Metronome::getInstance().SetBeat(Beat::BEAT_WOOD);
+				break;
 			case IDC_STARTBUTTON:
-				Metronome::getInstance().Start();
-				break;
-			case IDC_STOPBUTTON:
-				Metronome::getInstance().Stop();
-				break;
-			case IDM_ADD:
-				SetDlgItemText(hWnd, IDC_OPBUTTON, TEXT("+"));
-				op = ADD;
-				break;
-			case IDM_SUB:
-				SetDlgItemText(hWnd, IDC_OPBUTTON, TEXT("-"));
-				op = SUB;
-				break;
-			case IDM_MULT:
-				SetDlgItemText(hWnd, IDC_OPBUTTON, TEXT("x"));
-				op = MULT;
-				break;
-			case IDM_REM:
-				SetDlgItemText(hWnd, IDC_OPBUTTON, TEXT("%"));
-				op = REM;
-				break;
-			case IDC_OPBUTTON:{
-				BOOL success = false;
-				int lhs = GetDlgItemInt(hWnd, IDC_LHS, &success, true);
-				if (!success)
+				try
 				{
-					MessageBox(hWnd, TEXT("The first expression is not an integer."), TEXT("Error"), MB_OK);
-					break;
-				}
-
-				int rhs = GetDlgItemInt(hWnd, IDC_RHS, &success, true);
-				if (!success)
-				{
-					MessageBox(hWnd, TEXT("The second expression is not an integer."), TEXT("Error"), MB_OK);
-					break;
-				}
-
-				int result = 0;
-				switch (op)
-				{
-				case ADD:
-					result = lhs + rhs;
-					break;
-				case SUB:
-					result = lhs - rhs;
-					break;
-				case MULT:
-					result = lhs * rhs;
-					break;
-				case REM:
-					if (rhs == 0) {
-						SetDlgItemText(hWnd, IDC_RESULT, TEXT("Undefined"));
-						return 0;
+					BOOL success = false;
+					int bpm = GetDlgItemInt(hWnd, IDC_BPM, &success, true);
+					if (success)
+					{
+						Metronome::getInstance().Start(bpm);
 					}
 					else
 					{
-						result = lhs % rhs;
+						throw BpmInvalidException();
 					}
 				}
-				SetDlgItemInt(hWnd, IDC_RESULT, result, true);
+				catch (exception &e)
+				{
+					int num = strlen(e.what());
+					WCHAR *wStr = new WCHAR[num];
+					MultiByteToWideChar(0, 0, e.what(), num-1, wStr, num);
+					MessageBox(hWnd, wStr, TEXT("Error"), MB_OK);
+					delete wStr;
+				}
 				break;
-			}
+			case IDC_STOPBUTTON:
+				try
+				{
+					Metronome::getInstance().Stop();
+				}
+				catch (NotRunningException &e)
+				{
+					// Ignore
+				}
+				break;
 		}
 		
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
 		// TODO: Add any drawing code here...
 		MoveToEx(hdc, 10, 78, NULL);
-		LineTo(hdc, 115, 78);
-
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_DESTROY:
